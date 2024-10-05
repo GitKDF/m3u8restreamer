@@ -39,6 +39,7 @@ namespace m3u8restreamer
                     .WithMode(HttpListenerMode.EmbedIO))
                 .WithLocalSessionManager()
                 .WithModule(new ActionModule("/getStream", HttpVerbs.Any, GetStream));
+                .WithModule(new ActionModule("/convertM3U", HttpVerbs.Any, ConvertM3U)); 
 
             // Important: Do not ignore write exceptions, but let them bubble up.
             // This allows us to see when a client disconnects, so that we can stop streaming.
@@ -50,9 +51,73 @@ namespace m3u8restreamer
             "Server is started and ready to receive connections.".Log(nameof(StartServer), LogLevel.Info);
         }
 
+        private static async Task ConvertM3U(IHttpContext context)
+        {
+            // Extract the full URL
+            string fullUrl = context.Request.Url.ToString();
+            Uri uri = new Uri(fullUrl);
+        
+            // Save baseURL
+            string baseURL = uri.GetLeftPart(UriPartial.Authority) + "/";
+        
+            // Save queryString
+            string queryString = uri.Query;
+        
+            // Extract m3u URL
+            string m3uPath = uri.AbsolutePath.Replace("/convertM3U/", "");
+            string m3u = HttpUtility.UrlDecode(m3uPath);
+        
+            // Download m3u file content
+            string m3uContent;
+            using (HttpClient client = new HttpClient())
+            {
+                m3uContent = await client.GetStringAsync(m3u);
+        
+                // Get the content type from the HTTP response headers
+                string contentType = client.ResponseHeaders.GetValues("Content-Type").FirstOrDefault();
+            }
+        
+            // Process m3u content
+            string[] lines = m3uContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            List<string> updatedLines = new List<string>();
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || line.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) && line.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+                {
+                    string encodedLine = HttpUtility.UrlEncode(line);
+                    string newLine = $"{baseURL}getStream/{encodedLine}?{queryString}";
+                    updatedLines.Add(newLine);
+                }
+                else
+                {
+                    updatedLines.Add(line);
+                }
+            }
+        
+            // Send modified m3u content as response
+            context.Response.ContentType = contentType ?? "application/vnd.apple.mpegurl";
+            using (StreamWriter writer = new StreamWriter(context.Response.OutputStream))
+            {
+                foreach (string updatedLine in updatedLines)
+                {
+                    await writer.WriteLineAsync(updatedLine);
+                }
+            }
+            await context.Response.OutputStream.FlushAsync();
+        }
+
         private static async Task GetStream(IHttpContext context)
         {
-            string m3u8 = HttpUtility.UrlDecode(context.RequestedPath.TrimStart('/'));
+            string fullUrl = HttpUtility.UrlDecode(context.RequestedPath.TrimStart('/'));
+            Uri uri = new Uri(fullUrl);
+            string m3u8 = uri.GetLeftPart(UriPartial.Path);
+            string referer = HttpUtility.ParseQueryString(uri.Query).Get("referer");
+            string agent = HttpUtility.ParseQueryString(uri.Query).Get("agent");
+            
+            if (string.IsNullOrEmpty(agent))
+            {
+                agent = Environment.GetEnvironmentVariable("AGENT");
+            }
 
             context.Response.ContentType = "video/mp2t";
             context.Response.SendChunked = true;
@@ -61,10 +126,14 @@ namespace m3u8restreamer
             context.Response.Headers["Expires"] = "0";
             await context.Response.OutputStream.FlushAsync();
 
-            string command = $"-q --no-warnings --downloader ffmpeg {m3u8} -o -";
-
-            $"Got request to play stream {m3u8}. Starting now with command {command}".Log(nameof(GetStream), LogLevel.Info);
-
+            string command = $"-q --no-warnings --downloader ffmpeg --referer \"{referer}\" \"{m3u8}\" -o -";
+            if (!string.IsNullOrEmpty(agent))
+            {
+                command += $" --user-agent \"{agent}\"";
+            }
+            
+            $"Got request to play stream {m3u8} with referer {referer} and agent {agent}. Starting now with command {command}".Log(nameof
+                                                                                                                                   
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = "yt-dlp",
