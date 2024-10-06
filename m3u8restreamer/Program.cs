@@ -114,8 +114,7 @@ namespace m3u8restreamer
         private static async Task GetStream(IHttpContext context)
         {
             // Parse the full URL and extract relevant components
-            string requestPath = context.Request.Path;
-            Uri uri = new Uri(requestPath);
+            Uri uri = new Uri(context.RequestedPath);
             string m3u8 = HttpUtility.UrlDecode(uri.AbsolutePath.Substring("/getStream/".Length));
             string referer = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("referer") ?? string.Empty);
             string agent = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("agent") ?? string.Empty);
