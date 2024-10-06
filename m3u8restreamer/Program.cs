@@ -74,10 +74,11 @@ namespace m3u8restreamer
             string m3uContent;
             using (HttpClient client = new HttpClient())
             {
-                m3uContent = await client.GetStringAsync(m3u);
+                HttpResponseMessage response = await client.GetAsync(m3u);
+                m3uContent = await response.Content.ReadAsStringAsync();
         
                 // Get the content type from the HTTP response headers
-                string contentType = client.ResponseHeaders.GetValues("Content-Type").FirstOrDefault();
+                string contentType = response.Content.Headers.ContentType.ToString();  // Use Content.Headers.ContentType
             }
         
             // Process m3u content
