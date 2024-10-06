@@ -82,7 +82,7 @@ namespace m3u8restreamer
             List<string> updatedLines = new List<string>();
             foreach (string line in lines)
             {
-                if (line.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || line.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) && line.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+                if ((line.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || line.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) && line.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
                 {
                     string encodedLine = HttpUtility.UrlEncode(line);
                     string newLine = $"{baseURL}{encodedLine}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
