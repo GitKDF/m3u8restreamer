@@ -38,7 +38,7 @@ namespace m3u8restreamer
                     .WithUrlPrefix(server)
                     .WithMode(HttpListenerMode.EmbedIO))
                 .WithLocalSessionManager()
-                .WithModule(new ActionModule("/getStream", HttpVerbs.Any, GetStream));
+                .WithModule(new ActionModule("/getStream", HttpVerbs.Any, GetStream))
                 .WithModule(new ActionModule("/convertM3U", HttpVerbs.Any, ConvertM3U)); 
 
             // Important: Do not ignore write exceptions, but let them bubble up.
