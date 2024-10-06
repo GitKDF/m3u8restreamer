@@ -6,6 +6,9 @@ using System.Web;
 using EmbedIO;
 using EmbedIO.Actions;
 using Swan.Logging;
+using System.Net.Http;
+using System.Collections.Generic;
+using System.IO;
 
 namespace m3u8restreamer
 {
