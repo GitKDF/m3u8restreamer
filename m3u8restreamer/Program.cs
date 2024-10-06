@@ -58,7 +58,7 @@ namespace m3u8restreamer
             Uri uri = new Uri(fullUrl);
         
             // Save baseURL
-            string baseURL = uri.GetLeftPart(UriPartial.Authority) + "/";
+            string baseURL = uri.GetLeftPart(UriPartial.Authority) + "/getStream/";
         
             // Save queryString
             string queryString = uri.Query;
@@ -85,7 +85,7 @@ namespace m3u8restreamer
                 if (line.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || line.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) && line.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
                 {
                     string encodedLine = HttpUtility.UrlEncode(line);
-                    string newLine = $"{baseURL}getStream/{encodedLine}?{queryString}";
+                    string newLine = $"{baseURL}{encodedLine}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
                     updatedLines.Add(newLine);
                 }
                 else
