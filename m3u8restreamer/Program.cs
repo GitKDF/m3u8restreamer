@@ -72,13 +72,14 @@ namespace m3u8restreamer
         
             // Download m3u file content
             string m3uContent;
+            string contentType;
             using (HttpClient client = new HttpClient())
             {
                 HttpResponseMessage response = await client.GetAsync(m3u);
                 m3uContent = await response.Content.ReadAsStringAsync();
         
                 // Get the content type from the HTTP response headers
-                string contentType = response.Content.Headers.ContentType.ToString();  // Use Content.Headers.ContentType
+                contentType = response.Content.Headers.ContentType.ToString();  // Use Content.Headers.ContentType
             }
         
             // Process m3u content
@@ -113,7 +114,8 @@ namespace m3u8restreamer
         private static async Task GetStream(IHttpContext context)
         {
             // Parse the full URL and extract relevant components
-            Uri uri = new Uri(context.Request.Path);
+            string requestPath = context.Request.Path;
+            Uri uri = new Uri(requestPath);
             string m3u8 = HttpUtility.UrlDecode(uri.AbsolutePath.Substring("/getStream/".Length));
             string referer = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("referer") ?? string.Empty);
             string agent = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("agent") ?? string.Empty);
