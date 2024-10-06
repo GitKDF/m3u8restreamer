@@ -108,31 +108,27 @@ namespace m3u8restreamer
 
         private static async Task GetStream(IHttpContext context)
         {
-            string fullUrl = HttpUtility.UrlDecode(context.RequestedPath.TrimStart('/'));
-            Uri uri = new Uri(fullUrl);
-            string m3u8 = uri.GetLeftPart(UriPartial.Path);
-            string referer = HttpUtility.ParseQueryString(uri.Query).Get("referer");
-            string agent = HttpUtility.ParseQueryString(uri.Query).Get("agent");
-            
+            // Parse the full URL and extract relevant components
+            Uri uri = new Uri(context.Request.Path);
+            string m3u8 = HttpUtility.UrlDecode(uri.AbsolutePath.Substring("/getStream/".Length));
+            string referer = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("referer") ?? string.Empty);
+            string agent = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(uri.Query).Get("agent") ?? string.Empty);
+
+            string command = $"-q --no-warnings --downloader ffmpeg \"{m3u8}\" -o -";
+            if (!string.IsNullOrEmpty(referer))
+            {
+                command += $" --referer \"{referer}\"";
+            }
             if (string.IsNullOrEmpty(agent))
             {
                 agent = Environment.GetEnvironmentVariable("AGENT");
             }
-
-            context.Response.ContentType = "video/mp2t";
-            context.Response.SendChunked = true;
-            context.Response.Headers["Cache-Control"] = "no-cache";
-            context.Response.Headers["Pragma"] = "no-cache";
-            context.Response.Headers["Expires"] = "0";
-            await context.Response.OutputStream.FlushAsync();
-
-            string command = $"-q --no-warnings --downloader ffmpeg --referer \"{referer}\" \"{m3u8}\" -o -";
             if (!string.IsNullOrEmpty(agent))
             {
                 command += $" --user-agent \"{agent}\"";
             }
             
-            $"Got request to play stream {m3u8} with referer {referer} and agent {agent}. Starting now with command {command}".Log(nameof
+            $"Got request to play stream {m3u8} with referer {referer} and agent {agent}. Starting now with command {command}".Log(nameof(GetStream), LogLevel.Info);
                                                                                                                                    
             Process process = Process.Start(new ProcessStartInfo
             {
